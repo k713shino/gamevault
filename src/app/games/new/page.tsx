@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { searchBGG, getBGGGameDetail, BGGSearchResult } from '@/lib/bgg'
 
 const CATEGORIES = [
   '戦略',
@@ -24,11 +25,70 @@ export default function NewGamePage() {
   const [status, setStatus] = useState<'owned' | 'wishlist' | 'lent'>('owned')
   const [memo, setMemo] = useState('')
   const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imageUrl, setImageUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // BGG検索用
+  const [bggQuery, setBggQuery] = useState('')
+  const [bggResults, setBggResults] = useState<BGGSearchResult[]>([])
+  const [bggSearching, setBggSearching] = useState(false)
+  const [bggLoading, setBggLoading] = useState(false)
+
   const router = useRouter()
   const supabase = createClient()
+
+  // BGG検索
+  const handleBGGSearch = async () => {
+    if (!bggQuery.trim()) return
+    setBggSearching(true)
+    setBggResults([])
+    try {
+      const results = await searchBGG(bggQuery)
+      setBggResults(results)
+    } catch (err) {
+      console.error('BGG search error:', err)
+    } finally {
+      setBggSearching(false)
+    }
+  }
+
+  // BGGからゲーム情報を取得して入力
+  const handleBGGSelect = async (id: string) => {
+    setBggLoading(true)
+    try {
+      const detail = await getBGGGameDetail(id)
+      if (detail) {
+        setTitle(detail.name)
+        setPlayerCountMin(detail.minPlayers?.toString() || '')
+        setPlayerCountMax(detail.maxPlayers?.toString() || '')
+        setPlayTime(detail.playingTime?.toString() || '')
+        if (detail.image) {
+          setImageUrl(detail.image)
+        }
+        // カテゴリのマッピング（英語→日本語）
+        const categoryMap: { [key: string]: string } = {
+          'Strategy': '戦略',
+          'Party Game': 'パーティー',
+          'Cooperative': '協力',
+          'Deck Building': 'デッキ構築',
+          'Deduction': '正体隠匿',
+          'Card Game': 'デッキ構築',
+          'Bluffing': '正体隠匿',
+        }
+        const matchedCategory = detail.categories.find(cat => categoryMap[cat])
+        if (matchedCategory && categoryMap[matchedCategory]) {
+          setCategory(categoryMap[matchedCategory])
+        }
+      }
+      setBggResults([])
+      setBggQuery('')
+    } catch (err) {
+      console.error('BGG detail error:', err)
+    } finally {
+      setBggLoading(false)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -42,9 +102,9 @@ export default function NewGamePage() {
         return
       }
 
-      let imageUrl: string | null = null
+      let finalImageUrl: string | null = imageUrl
 
-      // 画像アップロード
+      // ファイルがアップロードされた場合はそちらを優先
       if (imageFile) {
         const fileExt = imageFile.name.split('.').pop()
         const fileName = `${user.id}/${Date.now()}.${fileExt}`
@@ -59,16 +119,15 @@ export default function NewGamePage() {
           .from('game-images')
           .getPublicUrl(fileName)
 
-        imageUrl = urlData.publicUrl
+        finalImageUrl = urlData.publicUrl
       }
 
-      // ゲーム登録
       const finalCategory = category === 'custom' ? customCategory : category
 
       const { error: insertError } = await supabase.from('games').insert({
         user_id: user.id,
         title,
-        image_url: imageUrl,
+        image_url: finalImageUrl,
         player_count_min: playerCountMin ? parseInt(playerCountMin) : null,
         player_count_max: playerCountMax ? parseInt(playerCountMax) : null,
         play_time: playTime ? parseInt(playTime) : null,
@@ -99,7 +158,76 @@ export default function NewGamePage() {
       </header>
 
       <main className="max-w-3xl mx-auto px-4 py-6">
+        {/* BGG検索セクション */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg shadow-md p-4 mb-6">
+          <h2 className="font-bold text-gray-900 mb-2">📚 BGGから検索</h2>
+          <p className="text-sm text-gray-700 mb-3">
+            BoardGameGeekからゲーム情報を自動入力できます
+          </p>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              placeholder="ゲーム名（英語推奨）"
+              value={bggQuery}
+              onChange={(e) => setBggQuery(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleBGGSearch())}
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-gray-900 bg-white"
+            />
+            <button
+              type="button"
+              onClick={handleBGGSearch}
+              disabled={bggSearching}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 font-medium"
+            >
+              {bggSearching ? '検索中...' : '検索'}
+            </button>
+          </div>
+
+          {/* 検索結果 */}
+          {bggResults.length > 0 && (
+            <div className="mt-3 bg-white border border-gray-200 rounded-md max-h-60 overflow-y-auto">
+              {bggResults.map((result) => (
+                <button
+                  key={result.id}
+                  type="button"
+                  onClick={() => handleBGGSelect(result.id)}
+                  disabled={bggLoading}
+                  className="w-full text-left px-3 py-2 hover:bg-gray-100 border-b border-gray-100 last:border-b-0 disabled:opacity-50"
+                >
+                  <span className="font-medium text-gray-900">{result.name}</span>
+                  {result.yearPublished && (
+                    <span className="text-gray-600 text-sm ml-2">({result.yearPublished})</span>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {bggLoading && (
+            <p className="mt-3 text-sm text-gray-700">ゲーム情報を取得中...</p>
+          )}
+        </div>
+
         <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-md p-6 space-y-4">
+          {/* BGGから取得した画像プレビュー */}
+          {imageUrl && !imageFile && (
+            <div>
+              <label className="block text-sm font-medium text-gray-800 mb-1">BGGから取得した画像</label>
+              <img
+                src={imageUrl}
+                alt="BGG image"
+                className="w-32 h-32 object-cover rounded"
+              />
+              <button
+                type="button"
+                onClick={() => setImageUrl(null)}
+                className="text-sm text-red-600 hover:underline mt-1"
+              >
+                画像を削除
+              </button>
+            </div>
+          )}
+
           {/* タイトル */}
           <div>
             <label className="block text-sm font-medium text-gray-800 mb-1">
@@ -116,7 +244,9 @@ export default function NewGamePage() {
 
           {/* 画像 */}
           <div>
-            <label className="block text-sm font-medium text-gray-800 mb-1">画像</label>
+            <label className="block text-sm font-medium text-gray-800 mb-1">
+              画像{imageUrl && '（アップロードするとBGG画像を上書きします）'}
+            </label>
             <input
               type="file"
               accept="image/*"
