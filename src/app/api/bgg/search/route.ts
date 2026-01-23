@@ -7,33 +7,31 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Query is required' }, { status: 400 })
   }
 
+  const token = process.env.BGG_API_TOKEN
+  
+  if (!token) {
+    return NextResponse.json({ 
+      error: 'BGG API token not configured' 
+    }, { status: 503 })
+  }
+
   try {
     const url = `https://boardgamegeek.com/xmlapi2/search?query=${encodeURIComponent(query)}&type=boardgame`
     
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 10000)
-    
     const response = await fetch(url, {
-      signal: controller.signal,
       headers: {
-        'Accept': 'text/xml,application/xml',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Accept-Encoding': 'gzip, deflate, br',
-        'Connection': 'keep-alive',
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/xml',
       },
     })
-    
-    clearTimeout(timeoutId)
     
     console.log('BGG Response status:', response.status)
     
     if (!response.ok) {
-      // BGGがブロックしている場合のフォールバック
       return NextResponse.json({ 
-        error: 'BGG API unavailable',
+        error: 'BGG API error',
         status: response.status 
-      }, { status: 503 })
+      }, { status: response.status })
     }
     
     const text = await response.text()

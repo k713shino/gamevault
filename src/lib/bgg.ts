@@ -19,7 +19,8 @@ export async function searchBGG(query: string): Promise<BGGSearchResult[]> {
   const response = await fetch(`/api/bgg/search?query=${encodeURIComponent(query)}`)
   
   if (!response.ok) {
-    console.error('BGG search failed:', response.status)
+    const errorData = await response.json().catch(() => ({}))
+    console.error('BGG search failed:', response.status, errorData)
     return []
   }
   
@@ -59,7 +60,8 @@ export async function getBGGGameDetail(id: string): Promise<BGGGameDetail | null
   const response = await fetch(`/api/bgg/detail?id=${id}`)
   
   if (!response.ok) {
-    console.error('BGG detail failed:', response.status)
+    const errorData = await response.json().catch(() => ({}))
+    console.error('BGG detail failed:', response.status, errorData)
     return null
   }
   

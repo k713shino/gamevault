@@ -7,23 +7,40 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'ID is required' }, { status: 400 })
   }
 
+  const token = process.env.BGG_API_TOKEN
+  
+  if (!token) {
+    return NextResponse.json({ 
+      error: 'BGG API token not configured' 
+    }, { status: 503 })
+  }
+
   try {
-    // xmlapi（v1）を使用
-    const url = `https://www.boardgamegeek.com/xmlapi/boardgame/${id}`
-    console.log('Fetching:', url)
+    const url = `https://boardgamegeek.com/xmlapi2/thing?id=${id}&stats=1`
     
     const response = await fetch(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/xml',
       },
     })
     
-    console.log('Response status:', response.status)
+    console.log('BGG Detail Response status:', response.status)
+    
+    if (!response.ok) {
+      return NextResponse.json({ 
+        error: 'BGG API error',
+        status: response.status 
+      }, { status: response.status })
+    }
     
     const text = await response.text()
     
     return new NextResponse(text, {
-      headers: { 'Content-Type': 'application/xml' },
+      headers: { 
+        'Content-Type': 'application/xml',
+        'Cache-Control': 'public, max-age=3600',
+      },
     })
   } catch (error) {
     console.error('BGG API error:', error)

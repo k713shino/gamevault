@@ -34,6 +34,7 @@ export default function NewGamePage() {
   const [bggResults, setBggResults] = useState<BGGSearchResult[]>([])
   const [bggSearching, setBggSearching] = useState(false)
   const [bggLoading, setBggLoading] = useState(false)
+  const [bggError, setBggError] = useState<string | null>(null)
 
   const router = useRouter()
   const supabase = createClient()
@@ -43,11 +44,16 @@ export default function NewGamePage() {
     if (!bggQuery.trim()) return
     setBggSearching(true)
     setBggResults([])
+    setBggError(null)
     try {
       const results = await searchBGG(bggQuery)
+      if (results.length === 0) {
+        setBggError('検索結果がありません。BGG APIが利用できない可能性があります。')
+      }
       setBggResults(results)
     } catch (err) {
       console.error('BGG search error:', err)
+      setBggError('BGG検索に失敗しました')
     } finally {
       setBggSearching(false)
     }
@@ -56,6 +62,7 @@ export default function NewGamePage() {
   // BGGからゲーム情報を取得して入力
   const handleBGGSelect = async (id: string) => {
     setBggLoading(true)
+    setBggError(null)
     try {
       const detail = await getBGGGameDetail(id)
       if (detail) {
@@ -68,23 +75,30 @@ export default function NewGamePage() {
         }
         // カテゴリのマッピング（英語→日本語）
         const categoryMap: { [key: string]: string } = {
+          'Abstract Strategy': '戦略',
           'Strategy': '戦略',
           'Party Game': 'パーティー',
           'Cooperative': '協力',
+          'Cooperative Game': '協力',
           'Deck Building': 'デッキ構築',
-          'Deduction': '正体隠匿',
+          'Deck, Bag, and Pool Building': 'デッキ構築',
           'Card Game': 'デッキ構築',
+          'Deduction': '正体隠匿',
           'Bluffing': '正体隠匿',
+          'Hidden Roles': '正体隠匿',
         }
         const matchedCategory = detail.categories.find(cat => categoryMap[cat])
         if (matchedCategory && categoryMap[matchedCategory]) {
           setCategory(categoryMap[matchedCategory])
         }
+      } else {
+        setBggError('ゲーム情報の取得に失敗しました')
       }
       setBggResults([])
       setBggQuery('')
     } catch (err) {
       console.error('BGG detail error:', err)
+      setBggError('ゲーム情報の取得に失敗しました')
     } finally {
       setBggLoading(false)
     }
@@ -182,6 +196,13 @@ export default function NewGamePage() {
               {bggSearching ? '検索中...' : '検索'}
             </button>
           </div>
+
+          {/* エラー表示 */}
+          {bggError && (
+            <p className="mt-3 text-sm text-amber-700 bg-amber-50 p-2 rounded">
+              ⚠️ {bggError}
+            </p>
+          )}
 
           {/* 検索結果 */}
           {bggResults.length > 0 && (
