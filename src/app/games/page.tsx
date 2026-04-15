@@ -9,14 +9,24 @@ const STATUS_LABEL: Record<string, string> = {
   owned: '所持',
   wishlist: '欲しい',
   lent: '貸出中',
-  played: 'プレイ済み',
 }
 
 const STATUS_COLOR: Record<string, string> = {
   owned: 'bg-green-100 text-green-800',
   wishlist: 'bg-yellow-100 text-yellow-800',
   lent: 'bg-red-100 text-red-800',
+}
+
+const PLAY_STATUS_LABEL: Record<string, string> = {
+  played: 'プレイ済み',
+  interested: '興味あり',
+  favorite: 'お気に入り',
+}
+
+const PLAY_STATUS_COLOR: Record<string, string> = {
   played: 'bg-purple-100 text-purple-800',
+  interested: 'bg-blue-100 text-blue-800',
+  favorite: 'bg-pink-100 text-pink-800',
 }
 
 export default function GamesPage() {
@@ -26,6 +36,7 @@ export default function GamesPage() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [playStatusFilter, setPlayStatusFilter] = useState<string>('all')
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
   const supabase = createClient()
 
@@ -61,8 +72,9 @@ export default function GamesPage() {
   const filteredGames = games.filter((game) => {
     const matchesSearch = game.title.toLowerCase().includes(searchQuery.toLowerCase())
     const matchesStatus = statusFilter === 'all' || game.status === statusFilter
+    const matchesPlayStatus = playStatusFilter === 'all' || game.play_status === playStatusFilter
     const matchesCategory = categoryFilter === 'all' || game.category === categoryFilter
-    return matchesSearch && matchesStatus && matchesCategory
+    return matchesSearch && matchesStatus && matchesPlayStatus && matchesCategory
   })
 
   const categories = [...new Set(games.map((g) => g.category).filter(Boolean))]
@@ -111,11 +123,20 @@ export default function GamesPage() {
               onChange={(e) => setStatusFilter(e.target.value)}
               className="px-3 py-2 border border-gray-300 rounded-md text-gray-900 bg-white"
             >
-              <option value="all">すべてのステータス</option>
+              <option value="all">所持状況：すべて</option>
               <option value="owned">所持</option>
               <option value="wishlist">欲しい</option>
               <option value="lent">貸出中</option>
+            </select>
+            <select
+              value={playStatusFilter}
+              onChange={(e) => setPlayStatusFilter(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-md text-gray-900 bg-white"
+            >
+              <option value="all">プレイ状況：すべて</option>
               <option value="played">プレイ済み</option>
+              <option value="interested">興味あり</option>
+              <option value="favorite">お気に入り</option>
             </select>
             <select
               value={categoryFilter}
@@ -189,9 +210,16 @@ export default function GamesPage() {
                       ? `${game.player_count_min}-${game.player_count_max}人`
                       : '人数未設定'}
                   </p>
-                  <span className={`inline-block mt-2 text-xs px-2 py-1 rounded font-medium ${STATUS_COLOR[game.status] ?? 'bg-gray-100 text-gray-800'}`}>
-                    {STATUS_LABEL[game.status] ?? game.status}
-                  </span>
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    <span className={`text-xs px-2 py-1 rounded font-medium ${STATUS_COLOR[game.status]}`}>
+                      {STATUS_LABEL[game.status]}
+                    </span>
+                    {game.play_status && (
+                      <span className={`text-xs px-2 py-1 rounded font-medium ${PLAY_STATUS_COLOR[game.play_status]}`}>
+                        {PLAY_STATUS_LABEL[game.play_status]}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </Link>
             ))}
@@ -224,9 +252,16 @@ export default function GamesPage() {
                     {game.category && ` / ${game.category}`}
                   </p>
                 </div>
-                <span className={`text-xs px-2 py-1 rounded font-medium ${STATUS_COLOR[game.status] ?? 'bg-gray-100 text-gray-800'}`}>
-                  {STATUS_LABEL[game.status] ?? game.status}
-                </span>
+                <div className="flex gap-1">
+                  <span className={`text-xs px-2 py-1 rounded font-medium ${STATUS_COLOR[game.status]}`}>
+                    {STATUS_LABEL[game.status]}
+                  </span>
+                  {game.play_status && (
+                    <span className={`text-xs px-2 py-1 rounded font-medium ${PLAY_STATUS_COLOR[game.play_status]}`}>
+                      {PLAY_STATUS_LABEL[game.play_status]}
+                    </span>
+                  )}
+                </div>
               </Link>
             ))}
           </div>

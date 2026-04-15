@@ -22,7 +22,8 @@ export default function NewGamePage() {
   const [playTime, setPlayTime] = useState('')
   const [category, setCategory] = useState('')
   const [customCategory, setCustomCategory] = useState('')
-  const [status, setStatus] = useState<'owned' | 'wishlist' | 'lent' | 'played'>('owned')
+  const [status, setStatus] = useState<'owned' | 'wishlist' | 'lent'>('owned')
+  const [playStatus, setPlayStatus] = useState<'played' | 'interested' | 'favorite' | ''>('')
   const [memo, setMemo] = useState('')
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imageUrl, setImageUrl] = useState<string | null>(null)
@@ -147,6 +148,7 @@ export default function NewGamePage() {
         play_time: playTime ? parseInt(playTime) : null,
         category: finalCategory || null,
         status,
+        play_status: playStatus || null,
         memo: memo || null,
       })
 
@@ -344,13 +346,27 @@ export default function NewGamePage() {
             </label>
             <select
               value={status}
-              onChange={(e) => setStatus(e.target.value as 'owned' | 'wishlist' | 'lent' | 'played')}
+              onChange={(e) => setStatus(e.target.value as 'owned' | 'wishlist' | 'lent')}
               className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 bg-white"
             >
               <option value="owned">所持</option>
               <option value="wishlist">欲しい</option>
               <option value="lent">貸出中</option>
+            </select>
+          </div>
+
+          {/* プレイ状況 */}
+          <div>
+            <label className="block text-sm font-medium text-gray-800 mb-1">プレイ状況</label>
+            <select
+              value={playStatus}
+              onChange={(e) => setPlayStatus(e.target.value as 'played' | 'interested' | 'favorite' | '')}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 bg-white"
+            >
+              <option value="">なし</option>
               <option value="played">プレイ済み</option>
+              <option value="interested">興味あり</option>
+              <option value="favorite">お気に入り</option>
             </select>
           </div>
 

@@ -1,4 +1,5 @@
-export type GameStatus = 'owned' | 'wishlist' | 'lent' | 'played'
+export type GameStatus = 'owned' | 'wishlist' | 'lent'
+export type PlayStatus = 'played' | 'interested' | 'favorite' | null
 
 export type Game = {
   id: string
@@ -10,6 +11,7 @@ export type Game = {
   play_time: number | null
   category: string | null
   status: GameStatus
+  play_status: PlayStatus
   memo: string | null
   created_at: string
   updated_at: string

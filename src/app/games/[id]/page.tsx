@@ -10,14 +10,24 @@ const STATUS_LABEL: Record<string, string> = {
   owned: '所持',
   wishlist: '欲しい',
   lent: '貸出中',
-  played: 'プレイ済み',
 }
 
 const STATUS_COLOR: Record<string, string> = {
   owned: 'bg-green-100 text-green-800',
   wishlist: 'bg-yellow-100 text-yellow-800',
   lent: 'bg-red-100 text-red-800',
+}
+
+const PLAY_STATUS_LABEL: Record<string, string> = {
+  played: 'プレイ済み',
+  interested: '興味あり',
+  favorite: 'お気に入り',
+}
+
+const PLAY_STATUS_COLOR: Record<string, string> = {
   played: 'bg-purple-100 text-purple-800',
+  interested: 'bg-blue-100 text-blue-800',
+  favorite: 'bg-pink-100 text-pink-800',
 }
 
 export default function GameDetailPage() {
@@ -116,9 +126,16 @@ export default function GameDetailPage() {
           <div className="p-6">
             <div className="flex items-start justify-between mb-4">
               <h1 className="text-2xl font-bold text-gray-900">{game.title}</h1>
-              <span className={`text-sm px-3 py-1 rounded font-medium ${STATUS_COLOR[game.status] ?? 'bg-gray-100 text-gray-800'}`}>
-                {STATUS_LABEL[game.status] ?? game.status}
-              </span>
+              <div className="flex gap-2 flex-wrap justify-end">
+                <span className={`text-sm px-3 py-1 rounded font-medium ${STATUS_COLOR[game.status]}`}>
+                  {STATUS_LABEL[game.status]}
+                </span>
+                {game.play_status && (
+                  <span className={`text-sm px-3 py-1 rounded font-medium ${PLAY_STATUS_COLOR[game.play_status]}`}>
+                    {PLAY_STATUS_LABEL[game.play_status]}
+                  </span>
+                )}
+              </div>
             </div>
 
             <dl className="space-y-3">
