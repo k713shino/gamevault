@@ -1,4 +1,4 @@
-export type GameStatus = 'owned' | 'wishlist' | 'lent'
+export type GameStatus = 'owned' | 'wishlist' | 'lent' | 'played'
 
 export type Game = {
   id: string

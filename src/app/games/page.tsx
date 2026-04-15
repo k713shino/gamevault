@@ -4,28 +4,38 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { Game } from '@/lib/types'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+
+const STATUS_LABEL: Record<string, string> = {
+  owned: '所持',
+  wishlist: '欲しい',
+  lent: '貸出中',
+  played: 'プレイ済み',
+}
+
+const STATUS_COLOR: Record<string, string> = {
+  owned: 'bg-green-100 text-green-800',
+  wishlist: 'bg-yellow-100 text-yellow-800',
+  lent: 'bg-red-100 text-red-800',
+  played: 'bg-purple-100 text-purple-800',
+}
 
 export default function GamesPage() {
   const [games, setGames] = useState<Game[]>([])
   const [loading, setLoading] = useState(true)
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
-  const router = useRouter()
   const supabase = createClient()
 
   useEffect(() => {
-    const checkUserAndFetchGames = async () => {
+    const init = async () => {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        router.push('/login')
-        return
-      }
+      setIsLoggedIn(!!user)
       fetchGames()
     }
-    checkUserAndFetchGames()
+    init()
   }, [])
 
   const fetchGames = async () => {
@@ -34,7 +44,7 @@ export default function GamesPage() {
       .from('games')
       .select('*')
       .order('created_at', { ascending: false })
-    
+
     if (error) {
       console.error('Error fetching games:', error)
     } else {
@@ -45,7 +55,7 @@ export default function GamesPage() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
-    router.push('/login')
+    setIsLoggedIn(false)
   }
 
   const filteredGames = games.filter((game) => {
@@ -70,12 +80,18 @@ export default function GamesPage() {
       <header className="bg-white shadow-md">
         <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
           <h1 className="text-xl font-bold text-gray-900">GameVault</h1>
-          <button
-            onClick={handleLogout}
-            className="text-sm text-gray-700 hover:text-gray-900 font-medium"
-          >
-            ログアウト
-          </button>
+          {isLoggedIn ? (
+            <button
+              onClick={handleLogout}
+              className="text-sm text-gray-700 hover:text-gray-900 font-medium"
+            >
+              ログアウト
+            </button>
+          ) : (
+            <Link href="/login" className="text-sm text-blue-600 hover:underline font-medium">
+              ログイン
+            </Link>
+          )}
         </div>
       </header>
 
@@ -88,7 +104,7 @@ export default function GamesPage() {
               placeholder="タイトルで検索..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md flex-1 min-w-[200px] text-gray-900 bg-white"
+              className="px-3 py-2 border border-gray-300 rounded-md flex-1 min-w-50 text-gray-900 bg-white"
             />
             <select
               value={statusFilter}
@@ -99,6 +115,7 @@ export default function GamesPage() {
               <option value="owned">所持</option>
               <option value="wishlist">欲しい</option>
               <option value="lent">貸出中</option>
+              <option value="played">プレイ済み</option>
             </select>
             <select
               value={categoryFilter}
@@ -127,20 +144,24 @@ export default function GamesPage() {
           </div>
         </div>
 
-        {/* 新規登録ボタン */}
-        <div className="mb-6">
-          <Link
-            href="/games/new"
-            className="inline-block px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium shadow"
-          >
-            + ゲームを追加
-          </Link>
-        </div>
+        {/* 新規登録ボタン（ログイン時のみ） */}
+        {isLoggedIn && (
+          <div className="mb-6">
+            <Link
+              href="/games/new"
+              className="inline-block px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium shadow"
+            >
+              + ゲームを追加
+            </Link>
+          </div>
+        )}
 
         {/* ゲーム一覧 */}
         {filteredGames.length === 0 ? (
           <p className="text-gray-700 text-center py-8">
-            ゲームが登録されていません。「ゲームを追加」から登録してください。
+            {isLoggedIn
+              ? 'ゲームが登録されていません。「ゲームを追加」から登録してください。'
+              : 'ゲームが登録されていません。'}
           </p>
         ) : viewMode === 'grid' ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -168,12 +189,8 @@ export default function GamesPage() {
                       ? `${game.player_count_min}-${game.player_count_max}人`
                       : '人数未設定'}
                   </p>
-                  <span className={`inline-block mt-2 text-xs px-2 py-1 rounded font-medium ${
-                    game.status === 'owned' ? 'bg-green-100 text-green-800' :
-                    game.status === 'wishlist' ? 'bg-yellow-100 text-yellow-800' :
-                    'bg-red-100 text-red-800'
-                  }`}>
-                    {game.status === 'owned' ? '所持' : game.status === 'wishlist' ? '欲しい' : '貸出中'}
+                  <span className={`inline-block mt-2 text-xs px-2 py-1 rounded font-medium ${STATUS_COLOR[game.status] ?? 'bg-gray-100 text-gray-800'}`}>
+                    {STATUS_LABEL[game.status] ?? game.status}
                   </span>
                 </div>
               </Link>
@@ -187,7 +204,7 @@ export default function GamesPage() {
                 href={`/games/${game.id}`}
                 className="flex items-center p-4 border-b border-gray-200 hover:bg-gray-50"
               >
-                <div className="w-16 h-16 bg-gray-200 rounded flex-shrink-0 flex items-center justify-center">
+                <div className="w-16 h-16 bg-gray-200 rounded shrink-0 flex items-center justify-center">
                   {game.image_url ? (
                     <img
                       src={game.image_url}
@@ -207,12 +224,8 @@ export default function GamesPage() {
                     {game.category && ` / ${game.category}`}
                   </p>
                 </div>
-                <span className={`text-xs px-2 py-1 rounded font-medium ${
-                  game.status === 'owned' ? 'bg-green-100 text-green-800' :
-                  game.status === 'wishlist' ? 'bg-yellow-100 text-yellow-800' :
-                  'bg-red-100 text-red-800'
-                }`}>
-                  {game.status === 'owned' ? '所持' : game.status === 'wishlist' ? '欲しい' : '貸出中'}
+                <span className={`text-xs px-2 py-1 rounded font-medium ${STATUS_COLOR[game.status] ?? 'bg-gray-100 text-gray-800'}`}>
+                  {STATUS_LABEL[game.status] ?? game.status}
                 </span>
               </Link>
             ))}

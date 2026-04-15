@@ -22,7 +22,7 @@ export default function NewGamePage() {
   const [playTime, setPlayTime] = useState('')
   const [category, setCategory] = useState('')
   const [customCategory, setCustomCategory] = useState('')
-  const [status, setStatus] = useState<'owned' | 'wishlist' | 'lent'>('owned')
+  const [status, setStatus] = useState<'owned' | 'wishlist' | 'lent' | 'played'>('owned')
   const [memo, setMemo] = useState('')
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imageUrl, setImageUrl] = useState<string | null>(null)
@@ -344,12 +344,13 @@ export default function NewGamePage() {
             </label>
             <select
               value={status}
-              onChange={(e) => setStatus(e.target.value as 'owned' | 'wishlist' | 'lent')}
+              onChange={(e) => setStatus(e.target.value as 'owned' | 'wishlist' | 'lent' | 'played')}
               className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 bg-white"
             >
               <option value="owned">所持</option>
               <option value="wishlist">欲しい</option>
               <option value="lent">貸出中</option>
+              <option value="played">プレイ済み</option>
             </select>
           </div>
 

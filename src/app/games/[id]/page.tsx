@@ -6,9 +6,24 @@ import { Game } from '@/lib/types'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 
+const STATUS_LABEL: Record<string, string> = {
+  owned: '所持',
+  wishlist: '欲しい',
+  lent: '貸出中',
+  played: 'プレイ済み',
+}
+
+const STATUS_COLOR: Record<string, string> = {
+  owned: 'bg-green-100 text-green-800',
+  wishlist: 'bg-yellow-100 text-yellow-800',
+  lent: 'bg-red-100 text-red-800',
+  played: 'bg-purple-100 text-purple-800',
+}
+
 export default function GameDetailPage() {
   const [game, setGame] = useState<Game | null>(null)
   const [loading, setLoading] = useState(true)
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const router = useRouter()
   const params = useParams()
@@ -17,10 +32,7 @@ export default function GameDetailPage() {
   useEffect(() => {
     const fetchGame = async () => {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        router.push('/login')
-        return
-      }
+      setIsLoggedIn(!!user)
 
       const { data, error } = await supabase
         .from('games')
@@ -45,7 +57,6 @@ export default function GameDetailPage() {
 
     setDeleting(true)
 
-    // 画像があれば削除
     if (game?.image_url) {
       const path = game.image_url.split('/game-images/')[1]
       if (path) {
@@ -105,12 +116,8 @@ export default function GameDetailPage() {
           <div className="p-6">
             <div className="flex items-start justify-between mb-4">
               <h1 className="text-2xl font-bold text-gray-900">{game.title}</h1>
-              <span className={`text-sm px-3 py-1 rounded font-medium ${
-                game.status === 'owned' ? 'bg-green-100 text-green-800' :
-                game.status === 'wishlist' ? 'bg-yellow-100 text-yellow-800' :
-                'bg-red-100 text-red-800'
-              }`}>
-                {game.status === 'owned' ? '所持' : game.status === 'wishlist' ? '欲しい' : '貸出中'}
+              <span className={`text-sm px-3 py-1 rounded font-medium ${STATUS_COLOR[game.status] ?? 'bg-gray-100 text-gray-800'}`}>
+                {STATUS_LABEL[game.status] ?? game.status}
               </span>
             </div>
 
@@ -147,22 +154,24 @@ export default function GameDetailPage() {
               )}
             </dl>
 
-            {/* ボタン */}
-            <div className="flex gap-3 mt-6 pt-6 border-t border-gray-200">
-              <Link
-                href={`/games/${game.id}/edit`}
-                className="flex-1 text-center py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium shadow"
-              >
-                編集
-              </Link>
-              <button
-                onClick={handleDelete}
-                disabled={deleting}
-                className="flex-1 py-2 px-4 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 font-medium shadow"
-              >
-                {deleting ? '削除中...' : '削除'}
-              </button>
-            </div>
+            {/* ボタン（ログイン時のみ） */}
+            {isLoggedIn && (
+              <div className="flex gap-3 mt-6 pt-6 border-t border-gray-200">
+                <Link
+                  href={`/games/${game.id}/edit`}
+                  className="flex-1 text-center py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium shadow"
+                >
+                  編集
+                </Link>
+                <button
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="flex-1 py-2 px-4 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 font-medium shadow"
+                >
+                  {deleting ? '削除中...' : '削除'}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </main>
